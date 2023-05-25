@@ -31,7 +31,6 @@ import org.testng.Assert;
 @RunWith(MockitoJUnitRunner.class)
 public class HiveCompositeHandlerTest
 {
-
     @BeforeClass
     public static void dataSetUP() {
         System.setProperty("aws.region", "us-west-2");
