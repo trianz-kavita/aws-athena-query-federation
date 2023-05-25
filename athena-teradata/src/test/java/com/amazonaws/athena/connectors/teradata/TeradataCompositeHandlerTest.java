@@ -37,7 +37,7 @@ public class TeradataCompositeHandlerTest {
 
     @Test
     public void teradataCompositeHandlerTest(){
-      //  Exception ex = null;
+        Exception ex = null;
         try {
             DatabaseConnectionConfig databaseConnectionConfig = new DatabaseConnectionConfig("testCatalog", TeradataConstants.TERADATA_NAME,
                     "teradata://jdbc:teradata://hostname/user=dbc&password=dbc");
@@ -47,9 +47,8 @@ public class TeradataCompositeHandlerTest {
             teradataCompositeHandler = new TeradataCompositeHandler();
             assertEquals(teradataCompositeHandler.getClass(),TeradataCompositeHandler.class);
         }catch (Exception e){
-            //ex = e;
-            assertEquals(null,e);
+            ex = e;
         }
-       // assertEquals(null,e);
+        assertEquals(null,ex);
     }
 }
