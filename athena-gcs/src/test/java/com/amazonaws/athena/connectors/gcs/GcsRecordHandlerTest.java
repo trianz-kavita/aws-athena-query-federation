@@ -49,7 +49,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +67,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @TestInstance(PER_CLASS)
-public class GcsRecordHandlerTest
+public class GcsRecordHandlerTest extends GenericGcsTest
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(GcsRecordHandlerTest.class);
 
@@ -98,22 +97,11 @@ public class GcsRecordHandlerTest
 
     private static final BufferAllocator bufferAllocator = new RootAllocator();
 
-    private MockedStatic<AmazonS3ClientBuilder> mockedS3Builder;
-    private MockedStatic<AWSSecretsManagerClientBuilder> mockedSecretManagerBuilder;
-    private MockedStatic<AmazonAthenaClientBuilder> mockedAthenaClientBuilder;
-    private MockedStatic<GoogleCredentials> mockedGoogleCredentials;
-    private MockedStatic<GcsUtil> mockedGcsUtil;
-
 
     @BeforeAll
-    public void init()
+    public void initCommonMockedStatic()
     {
-        mockedS3Builder = Mockito.mockStatic(AmazonS3ClientBuilder.class);
-        mockedSecretManagerBuilder = Mockito.mockStatic(AWSSecretsManagerClientBuilder.class);
-        mockedAthenaClientBuilder = Mockito.mockStatic(AmazonAthenaClientBuilder.class);
-        mockedGoogleCredentials = Mockito.mockStatic(GoogleCredentials.class);
-        mockedGcsUtil = Mockito.mockStatic(GcsUtil.class);
-
+        super.initCommonMockedStatic();
         System.setProperty("aws.region", "us-east-1");
         LOGGER.info("Starting init.");
         federatedIdentity = Mockito.mock(FederatedIdentity.class);
@@ -156,11 +144,7 @@ public class GcsRecordHandlerTest
 
     @AfterAll
     public void closeMockedObjects() {
-        mockedS3Builder.close();
-        mockedSecretManagerBuilder.close();
-        mockedAthenaClientBuilder.close();
-        mockedGoogleCredentials.close();
-        mockedGcsUtil.close();
+        super.closeMockedObjects();
     }
 
     @SuppressWarnings("unchecked")
