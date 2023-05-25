@@ -39,7 +39,6 @@ public class Db2CompositeHandlerTest
     static {
         System.setProperty("aws.region", "us-east-1");
     }
-
     @Test
     public void Db2CompositeHandlerTest() {
         DatabaseConnectionConfig databaseConnectionConfig = new DatabaseConnectionConfig("testCatalog1", Db2Constants.NAME,
