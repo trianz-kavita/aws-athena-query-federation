@@ -57,19 +57,19 @@ public class KafkaCompositeHandlerTest {
     @Mock
     private AWSSecretsManager secretsManager;
 
-    private MockedStatic<KafkaUtils> mockedMskUtils;
+    private MockedStatic<KafkaUtils> mockedKafkaUtils;
     private MockedStatic<AWSSecretsManagerClientBuilder> mockedSecretsManagerClient;
     @Before
     public void setUp() throws Exception {
         mockedSecretsManagerClient = Mockito.mockStatic(AWSSecretsManagerClientBuilder.class);
         mockedSecretsManagerClient.when(()-> AWSSecretsManagerClientBuilder.defaultClient()).thenReturn(secretsManager);
-        mockedMskUtils = Mockito.mockStatic(KafkaUtils.class);
-        mockedMskUtils.when(() -> KafkaUtils.getKafkaConsumer(configOptions)).thenReturn(kafkaConsumer);
+        mockedKafkaUtils = Mockito.mockStatic(KafkaUtils.class);
+        mockedKafkaUtils.when(() -> KafkaUtils.getKafkaConsumer(configOptions)).thenReturn(kafkaConsumer);
     }
 
     @After
     public void close() {
-        mockedMskUtils.close();
+        mockedKafkaUtils.close();
         mockedSecretsManagerClient.close();
     }
 

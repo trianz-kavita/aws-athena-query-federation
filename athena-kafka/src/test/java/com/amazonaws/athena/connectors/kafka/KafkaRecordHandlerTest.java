@@ -98,7 +98,7 @@ public class KafkaRecordHandlerTest {
             .withQueryId(UUID.randomUUID().toString())
             .withIsDirectory(true)
             .build();
-    private MockedStatic<KafkaUtils> mockedMskUtils;
+    private MockedStatic<KafkaUtils> mockedKafkaUtils;
 
     @Before
     public void setUp() throws Exception {
@@ -124,13 +124,13 @@ public class KafkaRecordHandlerTest {
                 .withSpillLocation(s3SpillLocation)
                 .build();
         allocator = new BlockAllocatorImpl();
-        mockedMskUtils = Mockito.mockStatic(KafkaUtils.class, Mockito.CALLS_REAL_METHODS);
+        mockedKafkaUtils = Mockito.mockStatic(KafkaUtils.class, Mockito.CALLS_REAL_METHODS);
         kafkaRecordHandler = new KafkaRecordHandler(amazonS3, awsSecretsManager, athena, com.google.common.collect.ImmutableMap.of());
     }
 
     @After
     public void close(){
-        mockedMskUtils.close();
+        mockedKafkaUtils.close();
     }
 
     @Test
@@ -147,8 +147,8 @@ public class KafkaRecordHandlerTest {
         SplitParameters splitParameters = new SplitParameters("myTopic", 0, 0, 1);
         Schema schema = createSchema(createCsvTopicSchema());
 
-        mockedMskUtils.when(() -> KafkaUtils.getKafkaConsumer(schema, com.google.common.collect.ImmutableMap.of())).thenReturn(consumer);
-        mockedMskUtils.when(() -> KafkaUtils.createSplitParam(anyMap())).thenReturn(splitParameters);
+        mockedKafkaUtils.when(() -> KafkaUtils.getKafkaConsumer(schema, com.google.common.collect.ImmutableMap.of())).thenReturn(consumer);
+        mockedKafkaUtils.when(() -> KafkaUtils.createSplitParam(anyMap())).thenReturn(splitParameters);
 
         QueryStatusChecker queryStatusChecker = mock(QueryStatusChecker.class);
         when(queryStatusChecker.isQueryRunning()).thenReturn(true);
@@ -172,8 +172,8 @@ public class KafkaRecordHandlerTest {
         SplitParameters splitParameters = new SplitParameters("myTopic", 0, 0, 1);
         Schema schema = createSchema(createCsvTopicSchema());
 
-        mockedMskUtils.when(() -> KafkaUtils.getKafkaConsumer(schema, com.google.common.collect.ImmutableMap.of())).thenReturn(consumer);
-        mockedMskUtils.when(() -> KafkaUtils.createSplitParam(anyMap())).thenReturn(splitParameters);
+        mockedKafkaUtils.when(() -> KafkaUtils.getKafkaConsumer(schema, com.google.common.collect.ImmutableMap.of())).thenReturn(consumer);
+        mockedKafkaUtils.when(() -> KafkaUtils.createSplitParam(anyMap())).thenReturn(splitParameters);
         QueryStatusChecker queryStatusChecker = mock(QueryStatusChecker.class);
         when(queryStatusChecker.isQueryRunning()).thenReturn(false);
 
@@ -198,8 +198,8 @@ public class KafkaRecordHandlerTest {
         SplitParameters splitParameters = new SplitParameters("myTopic", 0, 0, 1);
         Schema schema = createSchema(createCsvTopicSchema());
 
-        mockedMskUtils.when(() -> KafkaUtils.getKafkaConsumer(schema, com.google.common.collect.ImmutableMap.of())).thenReturn(consumer);
-        mockedMskUtils.when(() -> KafkaUtils.createSplitParam(anyMap())).thenReturn(splitParameters);
+        mockedKafkaUtils.when(() -> KafkaUtils.getKafkaConsumer(schema, com.google.common.collect.ImmutableMap.of())).thenReturn(consumer);
+        mockedKafkaUtils.when(() -> KafkaUtils.createSplitParam(anyMap())).thenReturn(splitParameters);
         ReadRecordsRequest request = createReadRecordsRequest(schema);
         kafkaRecordHandler.readWithConstraint(null, request, null);
     }
@@ -220,8 +220,8 @@ public class KafkaRecordHandlerTest {
         SplitParameters splitParameters = new SplitParameters("myTopic", 0, 0, 1);
         Schema schema = createSchema(createCsvTopicSchema());
 
-        mockedMskUtils.when(() -> KafkaUtils.getKafkaConsumer(schema, com.google.common.collect.ImmutableMap.of())).thenReturn(consumer);
-        mockedMskUtils.when(() -> KafkaUtils.createSplitParam(anyMap())).thenReturn(splitParameters);
+        mockedKafkaUtils.when(() -> KafkaUtils.getKafkaConsumer(schema, com.google.common.collect.ImmutableMap.of())).thenReturn(consumer);
+        mockedKafkaUtils.when(() -> KafkaUtils.createSplitParam(anyMap())).thenReturn(splitParameters);
         QueryStatusChecker queryStatusChecker = mock(QueryStatusChecker.class);
         when(queryStatusChecker.isQueryRunning()).thenReturn(true);
 
