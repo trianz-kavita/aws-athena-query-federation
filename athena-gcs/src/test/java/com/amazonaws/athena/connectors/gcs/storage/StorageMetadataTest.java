@@ -22,15 +22,13 @@ package com.amazonaws.athena.connectors.gcs.storage;
 
 import com.amazonaws.athena.connector.lambda.domain.TableName;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
-import com.amazonaws.athena.connector.lambda.handlers.GlueMetadataHandler;
+import com.amazonaws.athena.connectors.gcs.GenericGcsTest;
 import com.amazonaws.services.glue.AWSGlue;
 import com.amazonaws.services.glue.AWSGlueClient;
-import com.amazonaws.services.glue.AWSGlueClientBuilder;
 import com.amazonaws.services.glue.model.Column;
 import com.amazonaws.services.glue.model.GetTableResult;
 import com.amazonaws.services.glue.model.StorageDescriptor;
 import com.amazonaws.services.glue.model.Table;
-import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder;
 import com.google.api.gax.paging.Page;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ServiceAccountCredentials;
@@ -43,13 +41,14 @@ import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.commons.lang3.reflect.FieldUtils;
 import org.jetbrains.annotations.NotNull;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -75,9 +74,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-
 @RunWith(MockitoJUnitRunner.class)
-public class StorageMetadataTest
+public class StorageMetadataTest extends GenericGcsTest
 {
     @Mock
     GoogleCredentials credentials;
@@ -92,41 +90,45 @@ public class StorageMetadataTest
     @Mock
     private ServiceAccountCredentials serviceAccountCredentials;
 
-    static {
-        Mockito.mockStatic(StorageOptions.class);
-        Mockito.mockStatic(ServiceAccountCredentials.class);
-        Mockito.mockStatic(GoogleCredentials.class);
-    }
+    private MockedStatic<StorageOptions> mockedStorageOptions;
+    private MockedStatic<ServiceAccountCredentials> mockedServiceAccountCredentials;
+    private MockedStatic<GoogleCredentials> mockedGoogleCredentials;
 
-
+    @SuppressWarnings("unchecked")
     @Before
     public void setUp() throws Exception
     {
-
+        mockedStorageOptions = Mockito.mockStatic(StorageOptions.class);
         StorageOptions.Builder optionBuilder = mock(StorageOptions.Builder.class);
-        Mockito.when(StorageOptions.newBuilder()).thenReturn(optionBuilder);
+        mockedStorageOptions.when(StorageOptions::newBuilder).thenReturn(optionBuilder);
         StorageOptions mockedOptions = mock(StorageOptions.class);
         Mockito.when(optionBuilder.setCredentials(ArgumentMatchers.any())).thenReturn(optionBuilder);
         Mockito.when(optionBuilder.build()).thenReturn(mockedOptions);
         Mockito.when(mockedOptions.getService()).thenReturn(storage);
-
         blobList = ImmutableList.of(blob);
-
 
         String gcsJson = "{\"gcs_credential_keys\":\"{\\\"type\\\": \\\"service_account\\\",\\\"project_id\\\": \\\"afq\\\",\\\"private_key_id\\\": \\\"6d559a25a53c666e6123456\\\",\\\"private_key\\\": \\\"-----BEGIN PRIVATE KEY-----\\\\n3cBBBa/2Bouf76nUmf91Ptg=\\\\n-----END PRIVATE KEY-----\\\\n\\\",\\\"client_email\\\": \\\"afq.iam.gserviceaccount.com\\\",\\\"client_id\\\": \\\"10947997337471234567\\\",\\\"auth_uri\\\": \\\"https://accounts.google.com/o/oauth2/auth\\\",\\\"token_uri\\\": \\\"https://oauth2.googleapis.com/token\\\",\\\"auth_provider_x509_cert_url\\\": \\\"https://www.googleapis.com/oauth2/v1/certs\\\",\\\"client_x509_cert_url\\\": \\\"https://www.googleapis.com/robot/v1/metadata/x509/afq.iam.gserviceaccount.com\\\"}\",\"gcs_HMAC_key\":\"GOOG1EGNWCPMWNY5IOMRELOVM22ZQEBEVDS7NX\",\"gcs_HMAC_secret\":\"haK0skzuPrUljknEsfcRJCYR\"}";
 
-//        mockStatic(ServiceAccountCredentials.class);
-        Mockito.when(ServiceAccountCredentials.fromStream(Mockito.any())).thenReturn(serviceAccountCredentials);
+        mockedServiceAccountCredentials = Mockito.mockStatic(ServiceAccountCredentials.class);
+        mockedServiceAccountCredentials.when(() -> ServiceAccountCredentials.fromStream(Mockito.any())).thenReturn(serviceAccountCredentials);
         MockitoAnnotations.initMocks(this);
-//        mockStatic(GoogleCredentials.class);
-        Mockito.when(GoogleCredentials.fromStream(Mockito.any())).thenReturn(credentials);
+        mockedGoogleCredentials = Mockito.mockStatic(GoogleCredentials.class);
+        mockedGoogleCredentials.when(() -> GoogleCredentials.fromStream(Mockito.any())).thenReturn(credentials);
         Mockito.when(credentials.createScoped((Collection<String>) any())).thenReturn(credentials);
         storageMetadata = new StorageMetadata(gcsJson);
     }
 
-    private void storageMock() throws IllegalAccessException
+    @After
+    public void tearDown()
     {
-        FieldUtils.writeField(storageMetadata, "storage", storage, true);
+        mockedStorageOptions.close();
+        mockedServiceAccountCredentials.close();
+        mockedGoogleCredentials.close();
+    }
+
+    private void storageMock()
+    {
+        GenericGcsTest.setInternalState(storageMetadata, "storage", storage);
         Mockito.when(storage.list(any(), any())).thenReturn(blobPage);
         blobList = ImmutableList.of(blob);
         Mockito.when(blob.getName()).thenReturn("birthday.parquet");
@@ -242,9 +244,9 @@ public class StorageMetadataTest
         return schema;
     }
 
-    private void getStorageList(List<String> partitionFiles) {
-//        Whitebox.setInternalState(storageMetadata, storage, storage);
-//        FieldUtils.writeField(storageMetadata, "storage", storage, true);
+    private void getStorageList(List<String> partitionFiles)
+    {
+        GenericGcsTest.setInternalState(storageMetadata, "storage", storage);
         Mockito.when(storage.list(any(), any())).thenReturn(blobPage);
         List<Blob> bList = new ArrayList<>();
         for (String fileName : partitionFiles) {
@@ -253,8 +255,7 @@ public class StorageMetadataTest
             Long size;
             if (fileName.contains(".")) {
                 size = 1L;
-            }
-            else {
+            } else {
                 size = 0L;
             }
             Mockito.when(blob.getSize()).thenReturn(size);
