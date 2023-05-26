@@ -21,6 +21,7 @@ package com.amazonaws.athena.connectors.gcs;
 
 import com.amazonaws.athena.connector.lambda.data.SchemaBuilder;
 import com.amazonaws.services.glue.model.Column;
+import com.google.common.collect.ImmutableMap;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BitVector;
@@ -174,7 +175,7 @@ public class GcsTestUtils {
         Mockito.lenient().when(fieldReader.getField()).thenReturn(Field.nullable(fieldName, fieldType));
         Mockito.lenient().when(block.getFieldReader(Mockito.anyString())).thenReturn(fieldReader);
         Marker low = Marker.exactly(new BlockAllocatorImpl(), new ArrowType.Utf8(), fieldValue);
-        return Map.of(
+        return ImmutableMap.of(
                 fieldName, SortedRangeSet.of(false, new Range(low, low))
         );
     }
