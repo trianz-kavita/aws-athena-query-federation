@@ -27,19 +27,23 @@ import com.amazonaws.athena.connector.lambda.data.SchemaBuilder;
 import com.amazonaws.athena.connector.lambda.domain.Split;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
-import com.amazonaws.athena.connector.lambda.metadata.GetSplitsRequest;
-import com.amazonaws.athena.connector.lambda.metadata.GetSplitsResponse;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableLayoutRequest;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableLayoutResponse;
+import com.amazonaws.athena.connector.lambda.domain.predicate.functions.StandardFunctions;
+import com.amazonaws.athena.connector.lambda.metadata.*;
+import com.amazonaws.athena.connector.lambda.metadata.optimizations.DataSourceOptimizations;
+import com.amazonaws.athena.connector.lambda.metadata.optimizations.OptimizationSubType;
+import com.amazonaws.athena.connector.lambda.metadata.optimizations.pushdown.ComplexExpressionPushdownSubType;
+import com.amazonaws.athena.connector.lambda.metadata.optimizations.pushdown.FilterPushdownSubType;
 import com.amazonaws.athena.connector.lambda.security.FederatedIdentity;
 import com.amazonaws.athena.connectors.jdbc.TestBase;
 import com.amazonaws.athena.connectors.jdbc.connection.DatabaseConnectionConfig;
 import com.amazonaws.athena.connectors.jdbc.connection.JdbcConnectionFactory;
 import com.amazonaws.athena.connectors.jdbc.connection.JdbcCredentialProvider;
+import com.amazonaws.athena.connectors.jdbc.manager.PreparedStatementBuilder;
 import com.amazonaws.services.athena.AmazonAthena;
 import com.amazonaws.services.secretsmanager.AWSSecretsManager;
 import com.amazonaws.services.secretsmanager.model.GetSecretValueRequest;
 import com.amazonaws.services.secretsmanager.model.GetSecretValueResult;
+import com.google.common.collect.ImmutableMap;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.junit.Assert;
@@ -63,6 +67,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.amazonaws.athena.connectors.mysql.MySqlConstants.MYSQL_NAME;
+import static com.amazonaws.athena.connectors.mysql.MySqlMetadataHandler.GET_PARTITIONS_QUERY;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.nullable;
 
 public class MySqlMetadataHandlerTest
@@ -91,6 +97,18 @@ public class MySqlMetadataHandlerTest
         this.federatedIdentity = Mockito.mock(FederatedIdentity.class);
     }
 
+    //Testcase created by me
+    @Test
+    public void doGetDataSourceCapabilities()
+    {
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        GetDataSourceCapabilitiesRequest req= Mockito.mock(GetDataSourceCapabilitiesRequest.class);
+        Mockito.when(req.getCatalogName()).thenReturn("testCatalogName");
+
+//        GetDataSourceCapabilitiesResponse res=Mockito.mock(GetDataSourceCapabilitiesResponse.class);
+        Assert.assertEquals(req.getCatalogName(), this.mySqlMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
+
+    }
     @Test
     public void getPartitionSchema()
     {
@@ -111,7 +129,7 @@ public class MySqlMetadataHandlerTest
         GetTableLayoutRequest getTableLayoutRequest = new GetTableLayoutRequest(this.federatedIdentity, "testQueryId", "testCatalogName", tableName, constraints, partitionSchema, partitionCols);
 
         PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(this.connection.prepareStatement(MySqlMetadataHandler.GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
+        Mockito.when(this.connection.prepareStatement(GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
 
         String[] columns = {"partition_name"};
         int[] types = {Types.VARCHAR};
@@ -153,7 +171,7 @@ public class MySqlMetadataHandlerTest
         GetTableLayoutRequest getTableLayoutRequest = new GetTableLayoutRequest(this.federatedIdentity, "testQueryId", "testCatalogName", tableName, constraints, partitionSchema, partitionCols);
 
         PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(this.connection.prepareStatement(MySqlMetadataHandler.GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
+        Mockito.when(this.connection.prepareStatement(GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
 
         String[] columns = {"partition_name"};
         int[] types = {Types.VARCHAR};
@@ -211,7 +229,7 @@ public class MySqlMetadataHandlerTest
         TableName tableName = new TableName("testSchema", "testTable");
 
         PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(this.connection.prepareStatement(MySqlMetadataHandler.GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
+        Mockito.when(this.connection.prepareStatement(GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
 
         String[] columns = {MySqlMetadataHandler.PARTITION_COLUMN_NAME};
         int[] types = {Types.VARCHAR};
@@ -251,13 +269,13 @@ public class MySqlMetadataHandlerTest
         GetTableLayoutRequest getTableLayoutRequest = new GetTableLayoutRequest(this.federatedIdentity, "testQueryId", "testCatalogName", tableName, constraints, partitionSchema, partitionCols);
 
         PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
-        Mockito.when(this.connection.prepareStatement(MySqlMetadataHandler.GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
+        Mockito.when(this.connection.prepareStatement(GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
 
         String[] columns = {"partition_name"};
         int[] types = {Types.VARCHAR};
         Object[][] values = {{"p0"}, {"p1"}};
         ResultSet resultSet = mockResultSet(columns, types, values, new AtomicInteger(-1));
-        final String expectedQuery = String.format(MySqlMetadataHandler.GET_PARTITIONS_QUERY, tableName.getTableName(), tableName.getSchemaName());
+        final String expectedQuery = String.format(GET_PARTITIONS_QUERY, tableName.getTableName(), tableName.getSchemaName());
         Mockito.when(preparedStatement.executeQuery()).thenReturn(resultSet);
 
         Mockito.when(this.connection.getMetaData().getSearchStringEscape()).thenReturn(null);
@@ -274,4 +292,16 @@ public class MySqlMetadataHandlerTest
         Set<Map<String, String>> actualSplits = getSplitsResponse.getSplits().stream().map(Split::getProperties).collect(Collectors.toSet());
         Assert.assertEquals(expectedSplits, actualSplits);
     }
+
+//    //new testcase
+//    private void decodeContinuationToken(){
+////        BlockAllocator splitBlockAllocator = new BlockAllocatorImpl();
+//        GetSplitsRequest getSplitsRequest = new GetSplitsRequest(this.federatedIdentity, "testQueryId", "testCatalogName", tableName, getTableLayoutResponse.getPartitions(), new ArrayList<>(partitionCols), constraints, null);
+//        GetSplitsResponse getSplitsResponse = this.mySqlMetadataHandler.decodeContinuationToken(getSplitsRequest);
+//
+//        Assert.assertTrue(getSplitsResponse,0);
+//    }
+//    public void encodeContinuationToken(){
+//
+//    }
 }
