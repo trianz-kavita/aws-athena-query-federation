@@ -97,14 +97,13 @@ public class MySqlMetadataHandlerTest
         this.federatedIdentity = Mockito.mock(FederatedIdentity.class);
     }
 
-    //Testcase created by me
+    //New Testcases
     @Test
     public void doGetDataSourceCapabilities()
     {
         BlockAllocator blockAllocator = new BlockAllocatorImpl();
         GetDataSourceCapabilitiesRequest req= Mockito.mock(GetDataSourceCapabilitiesRequest.class);
         Mockito.when(req.getCatalogName()).thenReturn("testCatalogName");
-
 //        GetDataSourceCapabilitiesResponse res=Mockito.mock(GetDataSourceCapabilitiesResponse.class);
         Assert.assertEquals(req.getCatalogName(), this.mySqlMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
 
@@ -293,15 +292,4 @@ public class MySqlMetadataHandlerTest
         Assert.assertEquals(expectedSplits, actualSplits);
     }
 
-//    //new testcase
-//    private void decodeContinuationToken(){
-////        BlockAllocator splitBlockAllocator = new BlockAllocatorImpl();
-//        GetSplitsRequest getSplitsRequest = new GetSplitsRequest(this.federatedIdentity, "testQueryId", "testCatalogName", tableName, getTableLayoutResponse.getPartitions(), new ArrayList<>(partitionCols), constraints, null);
-//        GetSplitsResponse getSplitsResponse = this.mySqlMetadataHandler.decodeContinuationToken(getSplitsRequest);
-//
-//        Assert.assertTrue(getSplitsResponse,0);
-//    }
-//    public void encodeContinuationToken(){
-//
-//    }
 }
