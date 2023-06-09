@@ -99,7 +99,6 @@ public class SaphanaMetadataHandlerTest
         BlockAllocator blockAllocator = new BlockAllocatorImpl();
         GetDataSourceCapabilitiesRequest req= new GetDataSourceCapabilitiesRequest(federatedIdentity, "queryId", "testCatalog");
         Assert.assertEquals(req.getCatalogName(), this.saphanaMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
-
     }
     @Test
     public void doGetTableLayout()
