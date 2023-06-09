@@ -94,7 +94,13 @@ public class SaphanaMetadataHandlerTest
                         .addField(SaphanaConstants.BLOCK_PARTITION_COLUMN_NAME, org.apache.arrow.vector.types.Types.MinorType.VARCHAR.getType()).build(),
                 this.saphanaMetadataHandler.getPartitionSchema("testCatalogName"));
     }
+    @Test
+    public void doGetDataSourceCapabilities(){
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        GetDataSourceCapabilitiesRequest req= new GetDataSourceCapabilitiesRequest(federatedIdentity, "queryId", "testCatalog");
+        Assert.assertEquals(req.getCatalogName(), this.saphanaMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
 
+    }
     @Test
     public void doGetTableLayout()
             throws Exception
