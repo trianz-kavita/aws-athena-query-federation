@@ -81,6 +81,15 @@ public class ImpalaMetadataHandlerTest
 
     }
 
+    @Test
+    public void doGetDataSourceCapabilities()
+    {
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        GetDataSourceCapabilitiesRequest req= Mockito.mock(GetDataSourceCapabilitiesRequest.class);
+        Mockito.when(req.getCatalogName()).thenReturn("testCatalogName");
+        Assert.assertEquals(req.getCatalogName(), this.impalaMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
+
+    }
 
     @Test
     public void getPartitionSchema() {
