@@ -37,7 +37,6 @@ public class Db2Constants
             "tabschema = ? order by tabname";
 
     static final String PARTITION_QUERY = "SELECT DATAPARTITIONID FROM SYSCAT.DATAPARTITIONS WHERE TABSCHEMA = ? AND TABNAME = ? AND SEQNO > 0";
-    static final String PARTITION_COLUMN_NAME = "DATAPARTITIONID";
     static final String COLUMN_INFO_QUERY = "select colname, typename from syscat.columns where tabschema = ? AND tabname = ?";
     private Db2Constants() {}
 }
