@@ -44,6 +44,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
+import java.lang.reflect.Method;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -418,4 +419,62 @@ public class SnowflakeMetadataHandlerTest
         String[] expectedResult = {"TESTSCHEMA","TESTCATALOG"};
         Assert.assertEquals(Arrays.toString(expectedResult), listSchemasResponse.getSchemas().toString());
     }
+
+    @Test
+    public void decodeContinuationToken() throws Exception
+    {
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        Constraints constraints = Mockito.mock(Constraints.class);
+        TableName tableName = new TableName("testSchema", "testTable");
+
+        PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
+
+        String[] columns = {"partition"};
+        int[] types = {Types.VARCHAR};
+        Object[][] values = {{"p0"}, {"p1"}};
+        ResultSet resultSet = mockResultSet(columns, types, values, new AtomicInteger(-1));
+        Mockito.when(preparedStatement.executeQuery()).thenReturn(resultSet);
+
+        Mockito.when(this.connection.getMetaData().getSearchStringEscape()).thenReturn(null);
+
+        Schema partitionSchema = this.snowflakeMetadataHandler.getPartitionSchema("testCatalogName");
+        Set<String> partitionCols = partitionSchema.getFields().stream().map(Field::getName).collect(Collectors.toSet());
+        GetTableLayoutRequest getTableLayoutRequest = new GetTableLayoutRequest(this.federatedIdentity,
+                "testQueryId", "testCatalogName", tableName, constraints, partitionSchema,
+                partitionCols);
+
+        String GET_PARTITIONS_QUERY = "Select count(*) FROM " + getTableLayoutRequest.getTableName().getSchemaName() + "." +
+                getTableLayoutRequest.getTableName().getTableName();
+        Mockito.when(this.connection.prepareStatement(GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
+
+
+        GetTableLayoutResponse getTableLayoutResponse = this.snowflakeMetadataHandler.doGetTableLayout(blockAllocator, getTableLayoutRequest);
+
+        BlockAllocator splitBlockAllocator = new BlockAllocatorImpl();
+        GetSplitsRequest getSplitsRequest = new GetSplitsRequest(this.federatedIdentity, "testQueryId",
+                "testCatalogName", tableName, getTableLayoutResponse.getPartitions(),
+                new ArrayList<>(partitionCols), constraints, null);
+
+        Method method = snowflakeMetadataHandler.getClass().getDeclaredMethod("decodeContinuationToken", GetSplitsRequest.class);
+        method.setAccessible(true);
+        int actualAnswer = (int) method.invoke(this.snowflakeMetadataHandler, getSplitsRequest);
+        Assert.assertEquals(0, actualAnswer);
+
+    }
+    @Test
+    public void encodeContinuationToken() throws Exception
+    {
+        Method method = snowflakeMetadataHandler.getClass().getDeclaredMethod("encodeContinuationToken", int.class);
+        method.setAccessible(true);
+        String actualAnswer = String.valueOf( method.invoke(snowflakeMetadataHandler, 6));
+        Assert.assertEquals("6", actualAnswer);
+    }
+
+    @Test
+    public void doGetDataSourceCapabilities(){
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        GetDataSourceCapabilitiesRequest req= new GetDataSourceCapabilitiesRequest(federatedIdentity, "queryId", "testCatalog");
+        Assert.assertEquals(req.getCatalogName(), this.snowflakeMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
+    }
+
 }

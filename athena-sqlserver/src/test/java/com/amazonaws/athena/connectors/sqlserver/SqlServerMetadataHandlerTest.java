@@ -27,14 +27,7 @@ import com.amazonaws.athena.connector.lambda.data.SchemaBuilder;
 import com.amazonaws.athena.connector.lambda.domain.Split;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
-import com.amazonaws.athena.connector.lambda.metadata.GetSplitsRequest;
-import com.amazonaws.athena.connector.lambda.metadata.GetSplitsResponse;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableLayoutRequest;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableLayoutResponse;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableRequest;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableResponse;
-import com.amazonaws.athena.connector.lambda.metadata.ListSchemasRequest;
-import com.amazonaws.athena.connector.lambda.metadata.ListSchemasResponse;
+import com.amazonaws.athena.connector.lambda.metadata.*;
 import com.amazonaws.athena.connector.lambda.security.FederatedIdentity;
 import com.amazonaws.athena.connectors.jdbc.TestBase;
 import com.amazonaws.athena.connectors.jdbc.connection.DatabaseConnectionConfig;
@@ -53,6 +46,7 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -418,4 +412,58 @@ public class SqlServerMetadataHandlerTest
         Assert.assertEquals(new ListSchemasResponse("schemas", Collections.emptyList()).toString(),
                 sqlServerMetadataHandler.doListSchemaNames(this.allocator, listSchemasRequest).toString());
     }
+
+    @Test
+    public void decodeContinuationToken() throws Exception
+    {
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        Constraints constraints = Mockito.mock(Constraints.class);
+        TableName tableName = new TableName("testSchema", "testTable");
+
+        PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
+        Mockito.when(this.connection.prepareStatement(sqlServerMetadataHandler.GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
+
+        String[] columns = {sqlServerMetadataHandler.PARTITION_NUMBER};
+        int[] types = {Types.VARCHAR};
+        Object[][] values = {{"p0"}, {"p1"}};
+        ResultSet resultSet = mockResultSet(columns, types, values, new AtomicInteger(-1));
+        Mockito.when(preparedStatement.executeQuery()).thenReturn(resultSet);
+
+        Mockito.when(this.connection.getMetaData().getSearchStringEscape()).thenReturn(null);
+
+        Schema partitionSchema = this.sqlServerMetadataHandler.getPartitionSchema("testCatalogName");
+        Set<String> partitionCols = partitionSchema.getFields().stream().map(Field::getName).collect(Collectors.toSet());
+        GetTableLayoutRequest getTableLayoutRequest = new GetTableLayoutRequest(this.federatedIdentity,
+                "testQueryId", "testCatalogName", tableName, constraints, partitionSchema,
+                partitionCols);
+
+        GetTableLayoutResponse getTableLayoutResponse = this.sqlServerMetadataHandler.doGetTableLayout(blockAllocator, getTableLayoutRequest);
+
+        BlockAllocator splitBlockAllocator = new BlockAllocatorImpl();
+        GetSplitsRequest getSplitsRequest = new GetSplitsRequest(this.federatedIdentity, "testQueryId",
+                "testCatalogName", tableName, getTableLayoutResponse.getPartitions(),
+                new ArrayList<>(partitionCols), constraints, null);
+
+        Method method = sqlServerMetadataHandler.getClass().getDeclaredMethod("decodeContinuationToken", GetSplitsRequest.class);
+        method.setAccessible(true);
+        int actualAnswer = (int) method.invoke(this.sqlServerMetadataHandler, getSplitsRequest);
+        Assert.assertEquals(0, actualAnswer);
+
+    }
+    @Test
+    public void encodeContinuationToken() throws Exception
+    {
+        Method method = sqlServerMetadataHandler.getClass().getDeclaredMethod("encodeContinuationToken", int.class);
+        method.setAccessible(true);
+        String actualAnswer = String.valueOf( method.invoke(sqlServerMetadataHandler, 6));
+        Assert.assertEquals("6", actualAnswer);
+    }
+
+    @Test
+    public void doGetDataSourceCapabilities(){
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        GetDataSourceCapabilitiesRequest req= new GetDataSourceCapabilitiesRequest(federatedIdentity, "queryId", "testCatalog");
+        Assert.assertEquals(req.getCatalogName(), this.sqlServerMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
+    }
+
 }

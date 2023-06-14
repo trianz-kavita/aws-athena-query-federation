@@ -42,6 +42,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 
+import java.lang.reflect.Method;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -316,5 +317,21 @@ public class HiveMetadataHandlerTest
         Mockito.when(this.connection.getMetaData().getColumns(nullable(String.class), nullable(String.class), nullable(String.class), nullable(String.class)))
                 .thenThrow(new SQLException());
         this.hiveMetadataHandler.doGetTable(this.blockAllocator, new GetTableRequest(this.federatedIdentity, "testQueryId", "testCatalog", inputTableName));
+    }
+
+    @Test
+    public void encodeContinuationToken() throws Exception
+    {
+        Method method = hiveMetadataHandler.getClass().getDeclaredMethod("encodeContinuationToken", int.class);
+        method.setAccessible(true);
+        String actualAnswer = String.valueOf( method.invoke(hiveMetadataHandler, 6));
+        Assert.assertEquals("6", actualAnswer);
+    }
+
+    @Test
+    public void doGetDataSourceCapabilities(){
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        GetDataSourceCapabilitiesRequest req= new GetDataSourceCapabilitiesRequest(federatedIdentity, "queryId", "testCatalog");
+        Assert.assertEquals(req.getCatalogName(), this.hiveMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
     }
 }

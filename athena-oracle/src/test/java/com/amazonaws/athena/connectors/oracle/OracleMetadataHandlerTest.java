@@ -45,6 +45,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -302,4 +303,58 @@ public class OracleMetadataHandlerTest
         Assert.assertEquals(inputTableName, getTableResponse.getTableName());
         Assert.assertEquals("testCatalog", getTableResponse.getCatalogName());
     }
+
+    @Test
+    public void decodeContinuationToken() throws Exception
+    {
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        Constraints constraints = Mockito.mock(Constraints.class);
+        TableName tableName = new TableName("testSchema", "testTable");
+
+        PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
+        Mockito.when(this.connection.prepareStatement(OracleMetadataHandler.GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
+
+        String[] columns = {OracleMetadataHandler.PARTITION_COLUMN_NAME};
+        int[] types = {Types.VARCHAR};
+        Object[][] values = {{"p0"}, {"p1"}};
+        ResultSet resultSet = mockResultSet(columns, types, values, new AtomicInteger(-1));
+        Mockito.when(preparedStatement.executeQuery()).thenReturn(resultSet);
+
+        Mockito.when(this.connection.getMetaData().getSearchStringEscape()).thenReturn(null);
+
+        Schema partitionSchema = this.oracleMetadataHandler.getPartitionSchema("testCatalogName");
+        Set<String> partitionCols = partitionSchema.getFields().stream().map(Field::getName).collect(Collectors.toSet());
+        GetTableLayoutRequest getTableLayoutRequest = new GetTableLayoutRequest(this.federatedIdentity,
+                "testQueryId", "testCatalogName", tableName, constraints, partitionSchema,
+                partitionCols);
+
+        GetTableLayoutResponse getTableLayoutResponse = this.oracleMetadataHandler.doGetTableLayout(blockAllocator, getTableLayoutRequest);
+
+        BlockAllocator splitBlockAllocator = new BlockAllocatorImpl();
+        GetSplitsRequest getSplitsRequest = new GetSplitsRequest(this.federatedIdentity, "testQueryId",
+                "testCatalogName", tableName, getTableLayoutResponse.getPartitions(),
+                new ArrayList<>(partitionCols), constraints, null);
+
+        Method method = oracleMetadataHandler.getClass().getDeclaredMethod("decodeContinuationToken", GetSplitsRequest.class);
+        method.setAccessible(true);
+        int actualAnswer = (int) method.invoke(this.oracleMetadataHandler, getSplitsRequest);
+        Assert.assertEquals(0, actualAnswer);
+
+    }
+    @Test
+    public void encodeContinuationToken() throws Exception
+    {
+        Method method = oracleMetadataHandler.getClass().getDeclaredMethod("encodeContinuationToken", int.class);
+        method.setAccessible(true);
+        String actualAnswer = String.valueOf( method.invoke(oracleMetadataHandler, 6));
+        Assert.assertEquals("6", actualAnswer);
+    }
+
+    @Test
+    public void doGetDataSourceCapabilities(){
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        GetDataSourceCapabilitiesRequest req= new GetDataSourceCapabilitiesRequest(federatedIdentity, "queryId", "testCatalog");
+        Assert.assertEquals(req.getCatalogName(), this.oracleMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
+    }
+
 }

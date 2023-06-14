@@ -168,7 +168,7 @@ public class CloudwatchRecordHandler
 
             if (!basicPredicate.getHigh().isNullValue()) {
                 Long upperBound = (Long) basicPredicate.getHigh().getValue();
-                request.setEndTime(upperBound);
+                request.setEndTime(upperBound+1);
             }
         }
 
