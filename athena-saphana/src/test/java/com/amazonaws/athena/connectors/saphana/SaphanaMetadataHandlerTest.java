@@ -87,6 +87,7 @@ public class SaphanaMetadataHandlerTest
         this.blockAllocator = Mockito.mock(BlockAllocator.class);
     }
 
+
     @Test
     public void getPartitionSchema()
     {

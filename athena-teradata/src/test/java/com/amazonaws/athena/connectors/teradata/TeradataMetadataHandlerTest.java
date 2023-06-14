@@ -77,6 +77,15 @@ public class TeradataMetadataHandlerTest
     }
 
     @Test
+    public void doGetDataSourceCapabilities()
+    {
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        GetDataSourceCapabilitiesRequest req= Mockito.mock(GetDataSourceCapabilitiesRequest.class);
+        Mockito.when(req.getCatalogName()).thenReturn("testCatalogName");
+        Assert.assertEquals(req.getCatalogName(), this.teradataMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
+
+    }
+    @Test
     public void getPartitionSchema()
     {
         Assert.assertEquals(SchemaBuilder.newBuilder()

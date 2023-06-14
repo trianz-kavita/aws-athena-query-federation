@@ -30,6 +30,7 @@ import com.amazonaws.athena.connector.lambda.security.FederatedIdentity;
 import com.google.api.gax.paging.Page;
 import com.google.cloud.bigquery.*;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -97,6 +98,15 @@ public class BigQueryMetadataHandlerTest
         mockedStatic.close();
     }
 
+    @Test
+    public void doGetDataSourceCapabilities()
+    {
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        GetDataSourceCapabilitiesRequest req= Mockito.mock(GetDataSourceCapabilitiesRequest.class);
+        Mockito.when(req.getCatalogName()).thenReturn("testCatalogName");
+        Assert.assertEquals(req.getCatalogName(), this.bigQueryMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
+
+    }
     @Test
     public void testDoListSchemaNames() throws java.io.IOException
     {

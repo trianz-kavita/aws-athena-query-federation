@@ -45,6 +45,7 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -98,6 +99,51 @@ public class Db2MetadataHandlerTest extends TestBase {
         Mockito.when(req.getCatalogName()).thenReturn("testCatalogName");
         Assert.assertEquals(req.getCatalogName(), this.db2MetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
 
+    }
+    @Test
+    public void decodeContinuationToken() throws Exception
+    {
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        Constraints constraints = Mockito.mock(Constraints.class);
+        TableName tableName = new TableName("testSchema", "testTable");
+
+        PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
+        Mockito.when(this.connection.prepareStatement(Db2Constants.PARTITION_QUERY)).thenReturn(preparedStatement);
+
+        String[] columns = {Db2Constants.PARTITION_COLUMN_NAME};
+        int[] types = {Types.VARCHAR};
+        Object[][] values = {{"p0"}, {"p1"}};
+        ResultSet resultSet = mockResultSet(columns, types, values, new AtomicInteger(-1));
+        Mockito.when(preparedStatement.executeQuery()).thenReturn(resultSet);
+
+        Mockito.when(this.connection.getMetaData().getSearchStringEscape()).thenReturn(null);
+
+        Schema partitionSchema = this.db2MetadataHandler.getPartitionSchema("testCatalogName");
+        Set<String> partitionCols = partitionSchema.getFields().stream().map(Field::getName).collect(Collectors.toSet());
+        GetTableLayoutRequest getTableLayoutRequest = new GetTableLayoutRequest(this.federatedIdentity,
+                "testQueryId", "testCatalogName", tableName, constraints, partitionSchema,
+                partitionCols);
+
+        GetTableLayoutResponse getTableLayoutResponse = this.db2MetadataHandler.doGetTableLayout(blockAllocator, getTableLayoutRequest);
+
+        BlockAllocator splitBlockAllocator = new BlockAllocatorImpl();
+        GetSplitsRequest getSplitsRequest = new GetSplitsRequest(this.federatedIdentity, "testQueryId",
+                "testCatalogName", tableName, getTableLayoutResponse.getPartitions(),
+                new ArrayList<>(partitionCols), constraints, null);
+
+        Method method = db2MetadataHandler.getClass().getDeclaredMethod("decodeContinuationToken", GetSplitsRequest.class);
+        method.setAccessible(true);
+        int actualAnswer = (int) method.invoke(this.db2MetadataHandler, getSplitsRequest);
+        Assert.assertEquals(0, actualAnswer);
+
+    }
+    @Test
+    public void encodeContinuationToken() throws Exception
+    {
+        Method method = db2MetadataHandler.getClass().getDeclaredMethod("encodeContinuationToken", int.class);
+        method.setAccessible(true);
+        String actualAnswer = String.valueOf( method.invoke(db2MetadataHandler, 6));
+        Assert.assertEquals("6", actualAnswer);
     }
 
     @Test

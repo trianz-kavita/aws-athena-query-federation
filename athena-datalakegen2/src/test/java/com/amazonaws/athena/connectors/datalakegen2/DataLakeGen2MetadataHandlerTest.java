@@ -27,12 +27,7 @@ import com.amazonaws.athena.connector.lambda.data.SchemaBuilder;
 import com.amazonaws.athena.connector.lambda.domain.Split;
 import com.amazonaws.athena.connector.lambda.domain.TableName;
 import com.amazonaws.athena.connector.lambda.domain.predicate.Constraints;
-import com.amazonaws.athena.connector.lambda.metadata.GetSplitsRequest;
-import com.amazonaws.athena.connector.lambda.metadata.GetSplitsResponse;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableLayoutRequest;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableLayoutResponse;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableRequest;
-import com.amazonaws.athena.connector.lambda.metadata.GetTableResponse;
+import com.amazonaws.athena.connector.lambda.metadata.*;
 import com.amazonaws.athena.connector.lambda.security.FederatedIdentity;
 import com.amazonaws.athena.connectors.jdbc.TestBase;
 import com.amazonaws.athena.connectors.jdbc.connection.DatabaseConnectionConfig;
@@ -102,6 +97,15 @@ public class DataLakeGen2MetadataHandlerTest
         Assert.assertEquals(SchemaBuilder.newBuilder()
                         .addField(DataLakeGen2MetadataHandler.PARTITION_NUMBER, org.apache.arrow.vector.types.Types.MinorType.VARCHAR.getType()).build(),
                 this.dataLakeGen2MetadataHandler.getPartitionSchema("testCatalogName"));
+    }
+    @Test
+    public void doGetDataSourceCapabilities()
+    {
+        BlockAllocator blockAllocator = new BlockAllocatorImpl();
+        GetDataSourceCapabilitiesRequest req= Mockito.mock(GetDataSourceCapabilitiesRequest.class);
+        Mockito.when(req.getCatalogName()).thenReturn("testCatalogName");
+        Assert.assertEquals(req.getCatalogName(), this.dataLakeGen2MetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
+
     }
 
     @Test
