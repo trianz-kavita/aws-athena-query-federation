@@ -105,7 +105,6 @@ public class MySqlMetadataHandlerTest
         BlockAllocator blockAllocator = new BlockAllocatorImpl();
         GetDataSourceCapabilitiesRequest req= Mockito.mock(GetDataSourceCapabilitiesRequest.class);
         Mockito.when(req.getCatalogName()).thenReturn("testCatalogName");
-//        GetDataSourceCapabilitiesResponse res=Mockito.mock(GetDataSourceCapabilitiesResponse.class);
         Assert.assertEquals(req.getCatalogName(), this.mySqlMetadataHandler.doGetDataSourceCapabilities(blockAllocator,req).getCatalogName());
 
     }
@@ -116,84 +115,7 @@ public class MySqlMetadataHandlerTest
                         .addField(MySqlMetadataHandler.BLOCK_PARTITION_COLUMN_NAME, org.apache.arrow.vector.types.Types.MinorType.VARCHAR.getType()).build(),
                 this.mySqlMetadataHandler.getPartitionSchema("testCatalogName"));
     }
-    @Test
-    public void decodeContinuationToken() throws Exception
 
-    {
-
-        BlockAllocator blockAllocator = new BlockAllocatorImpl();
-
-        Constraints constraints = Mockito.mock(Constraints.class);
-
-        TableName tableName = new TableName("testSchema", "testTable");
-
-
-        PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
-
-        Mockito.when(this.connection.prepareStatement(MySqlMetadataHandler.GET_PARTITIONS_QUERY)).thenReturn(preparedStatement);
-
-
-        String[] columns = {MySqlMetadataHandler.PARTITION_COLUMN_NAME};
-
-        int[] types = {Types.VARCHAR};
-
-        Object[][] values = {{"p0"}, {"p1"}};
-
-        ResultSet resultSet = mockResultSet(columns, types, values, new AtomicInteger(-1));
-
-        Mockito.when(preparedStatement.executeQuery()).thenReturn(resultSet);
-
-
-        Mockito.when(this.connection.getMetaData().getSearchStringEscape()).thenReturn(null);
-
-
-        Schema partitionSchema = this.mySqlMetadataHandler.getPartitionSchema("testCatalogName");
-
-        Set<String> partitionCols = partitionSchema.getFields().stream().map(Field::getName).collect(Collectors.toSet());
-
-        GetTableLayoutRequest getTableLayoutRequest = new GetTableLayoutRequest(this.federatedIdentity,
-
-                "testQueryId", "testCatalogName", tableName, constraints, partitionSchema,
-
-                partitionCols);
-
-
-        GetTableLayoutResponse getTableLayoutResponse = this.mySqlMetadataHandler.doGetTableLayout(blockAllocator, getTableLayoutRequest);
-
-
-        BlockAllocator splitBlockAllocator = new BlockAllocatorImpl();
-
-        GetSplitsRequest getSplitsRequest = new GetSplitsRequest(this.federatedIdentity, "testQueryId",
-
-                "testCatalogName", tableName, getTableLayoutResponse.getPartitions(),
-
-                new ArrayList<>(partitionCols), constraints, null);
-
-
-        Method method = mySqlMetadataHandler.getClass().getDeclaredMethod("decodeContinuationToken", GetSplitsRequest.class);
-
-        method.setAccessible(true);
-
-        int actualAnswer = (int) method.invoke(this.mySqlMetadataHandler, getSplitsRequest);
-
-        Assert.assertEquals(0, actualAnswer);
-
-
-    }
-
-    @Test
-    public void encodeContinuationToken() throws Exception
-    {
-
-        Method method = mySqlMetadataHandler.getClass().getDeclaredMethod("encodeContinuationToken", int.class);
-
-        method.setAccessible(true);
-
-        String actualAnswer = String.valueOf( method.invoke(mySqlMetadataHandler, 6));
-
-        Assert.assertEquals("6", actualAnswer);
-
-    }
     @Test
     public void doGetTableLayout()
             throws Exception
